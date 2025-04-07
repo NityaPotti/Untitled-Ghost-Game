@@ -152,56 +152,64 @@ public class DonutGameManager : MonoBehaviour
     }
 
     IEnumerator DropAndGrab()
+{
+    isMoving = true;
+    Vector3 targetPosition = tongs.position - new Vector3(0, dropHeight, 0);
+    float dropDuration = 1f;
+    float elapsedTime = 0;
+
+    // Lower the tongs
+    while (elapsedTime < dropDuration)
     {
-        isMoving = true;
-        Vector3 targetPosition = tongs.position - new Vector3(0, dropHeight, 0);
-        float dropDuration = 1f;
-        float elapsedTime = 0;
-
-        while (elapsedTime < dropDuration)
-        {
-            tongs.position = Vector3.Lerp(tongs.position, targetPosition, elapsedTime / dropDuration);
-            elapsedTime += Time.deltaTime;
-            yield return null;
-        }
-
-        RaycastHit hit;
-        if (Physics.Raycast(tongs.position, Vector3.down, out hit, 1f))
-        {
-            if (hit.collider.CompareTag("Donut"))
-            {
-                hit.collider.transform.SetParent(tongs);
-                hit.collider.GetComponent<Rigidbody>().isKinematic = true;
-            }
-        }
-
-        targetPosition = initialTongsPos;
-        elapsedTime = 0;
-
-        while (elapsedTime < dropDuration)
-        {
-            tongs.position = Vector3.Lerp(tongs.position, targetPosition, elapsedTime / dropDuration);
-            elapsedTime += Time.deltaTime;
-            yield return null;
-        }
-
-        if (tongs.childCount > 0)
-        {
-            // Successfully grabbed a donut, move it to the plate
-            Transform donut = tongs.GetChild(0);
-            donut.SetParent(null);  // Detach from tongs
-            donut.position = plate.position + new Vector3(0, 0.5f, 0);  // Place it on the plate
-            donut.GetComponent<Rigidbody>().isKinematic = false;  // Reactivate physics
-
-            Debug.Log("Donut placed on the plate!");
-        }
-        else
-        {
-            Debug.Log("Failed to grab a donut.");
-        }
-
-        tongs.position = initialTongsPos;
-        isMoving = false;
+        tongs.position = Vector3.Lerp(tongs.position, targetPosition, elapsedTime / dropDuration);
+        elapsedTime += Time.deltaTime;
+        yield return null;
     }
+
+    // Try grabbing a donut
+    Transform grabbedDonut = null;
+    RaycastHit hit;
+    if (Physics.Raycast(tongs.position, Vector3.down, out hit, 1f))
+    {
+        if (hit.collider.CompareTag("Donut"))
+        {
+            grabbedDonut = hit.collider.transform;
+            grabbedDonut.SetParent(tongs);
+            grabbedDonut.GetComponent<Rigidbody>().isKinematic = true; // Disable physics
+            Debug.Log("Donut grabbed!");
+        }
+    }
+
+    // Move tongs back up
+    targetPosition = initialTongsPos;
+    elapsedTime = 0;
+
+    while (elapsedTime < dropDuration)
+    {
+        tongs.position = Vector3.Lerp(tongs.position, targetPosition, elapsedTime / dropDuration);
+        elapsedTime += Time.deltaTime;
+        yield return null;
+    }
+
+    // Move the donut to the plate if it was grabbed
+    if (grabbedDonut != null)
+    {
+        grabbedDonut.SetParent(null); // Detach from tongs
+        grabbedDonut.position = plate.position + Vector3.up * 0.5f; // Adjust height
+        grabbedDonut.GetComponent<Rigidbody>().isKinematic = false; // Reactivate physics
+        Debug.Log("Donut placed on the plate!");
+    }
+    else
+    {
+        Debug.Log("Failed to grab a donut.");
+    }
+    ghostCamera.transform.position = new Vector3(tongs.position.x, tongs.position.y + 2, tongs.position.z - 5);
+    ghostCamera.transform.LookAt(plate); // Make the camera look at the plate
+
+
+    tongs.position = initialTongsPos;
+    isMoving = false;
+}
+
 }
 
